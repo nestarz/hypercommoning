@@ -1,0 +1,52 @@
+import React, {useEffect, useState} from "react";
+import {Router, Link} from "@reach/router";
+import register from "./../../src/event-source.js";
+const base = "http://localhost:8080";
+const join = (...args) => args.join("/").replace(/[\/]+/g, "/").replace(/^(.+):\//, "$1://").replace(/^file:/, "file:/").replace(/\/(\?|&|#[^!])/g, "$1").replace(/\?/g, "&").replace("&", "?");
+const usePeers = () => {
+  const [peers, setPeers] = useState([]);
+  useEffect(() => {
+    register(new EventSource(new URL("peers", base)), {
+      peers: (peers2) => setPeers(peers2),
+      peer: (peer) => setPeers([...peers, peer]),
+      log: console.log
+    });
+  }, []);
+  return peers;
+};
+const useFiles = (host, dir) => {
+  const [files, setFiles] = useState([]);
+  useEffect(() => {
+    fetch(join(base, "files", host, dir)).then((r) => r.json()).then(setFiles);
+  }, [host, dir]);
+  return files;
+};
+const Files = ({host, dir}) => {
+  console.log(dir);
+  const files = useFiles(host, dir);
+  const base2 = join("/", "remote", host);
+  return React.createElement(React.Fragment, null, files.map((name) => React.createElement("li", null, React.createElement(Link, {
+    to: dir ? join(base2, dir, name) : join(base2, name)
+  }, name))));
+};
+const Peer = ({host, dir = "/"}) => React.createElement("div", null, host, React.createElement(Files, {
+  host,
+  dir
+}));
+const Peers = () => {
+  const peers = usePeers();
+  console.log(peers);
+  return React.createElement(React.Fragment, null, "Peers", peers.map((host) => React.createElement(Peer, {
+    host
+  })));
+};
+const Discover = () => React.createElement(Peers, null);
+const Browse = ({host, location: {pathname}}) => React.createElement(Peer, {
+  host,
+  dir: /^\/.[^\/]*\/(.[^\/]*)(.*)/.exec(pathname)[2]
+});
+export default () => React.createElement(Router, null, React.createElement(Discover, {
+  path: "/"
+}), React.createElement(Browse, {
+  path: "/remote/:host/:dir/*"
+}));

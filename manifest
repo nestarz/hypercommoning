@@ -1,0 +1,7 @@
+asdf plugin-add golang
+asdf install golang 1.14
+asdf global golang 1.14
+go get -u github.com/caddyserver/xcaddy/cmd/xcaddy
+asdf reshim golang
+
+xcaddy build --with github.com/mholt/caddy-webdav/

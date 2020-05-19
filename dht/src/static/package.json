@@ -1,0 +1,16 @@
+{
+  "name": "static",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@eliaspourquoi/heritage": "^0.1.8",
+    "esdev": "^0.0.21"
+  },
+  "webDependencies": {
+    "es-module-shims": "0.4.6",
+    "react": "16.13.1",
+    "react-dom": "16.13.1",
+    "@reach/router": "1.3.3"
+  }
+}
