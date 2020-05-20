@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import {Router, Link} from "@reach/router";
 import register from "./../../src/event-source.js";
 const base = "http://localhost:8080";
@@ -21,11 +21,26 @@ const useFiles = (host, dir) => {
   }, [host, dir]);
   return files;
 };
+const Download = ({name, host, route, children}) => {
+  const download = useCallback(() => {
+    fetch(join(base, "download", host, route)).then((res) => res.blob()).then((blob) => {
+      const file = window.URL.createObjectURL(blob);
+      window.location.assign(file);
+    });
+  }, [host, route]);
+  return React.createElement("a", {
+    href: "#",
+    onClick: download
+  }, children);
+};
 const Files = ({host, dir}) => {
-  console.log(dir);
   const files = useFiles(host, dir);
   const base2 = join("/", "remote", host);
-  return React.createElement(React.Fragment, null, files.map((name) => React.createElement("li", null, React.createElement(Link, {
+  return React.createElement(React.Fragment, null, files.map(({name, route, extension}) => React.createElement("li", null, extension ? React.createElement(Download, {
+    host,
+    route,
+    name
+  }, name) : React.createElement(Link, {
     to: dir ? join(base2, dir, name) : join(base2, name)
   }, name))));
 };
@@ -40,11 +55,29 @@ const Peers = () => {
     host
   })));
 };
+const useVerifyPeer = (host) => {
+  const [exists, setExists] = useState();
+  const [loading, setLoading] = useState();
+  useEffect(() => {
+    setLoading(true);
+    fetch(join(base, "check", host)).then((r) => r.json()).then(({exists: exists2}) => setExists(exists2)).finally(() => setLoading(false));
+  }, [host]);
+  return {
+    exists,
+    loading
+  };
+};
+const VerifyPeer = ({host, children}) => {
+  const {exists, loading} = useVerifyPeer(host);
+  return loading ? React.createElement(React.Fragment, null, "Fetching...") : !exists ? React.createElement(React.Fragment, null, "Peer not found...") : children;
+};
 const Discover = () => React.createElement(Peers, null);
-const Browse = ({host, location: {pathname}}) => React.createElement(Peer, {
+const Browse = ({host, location: {pathname}}) => React.createElement(VerifyPeer, {
+  host
+}, React.createElement(Peer, {
   host,
   dir: /^\/.[^\/]*\/(.[^\/]*)(.*)/.exec(pathname)[2]
-});
+}));
 export default () => React.createElement(Router, null, React.createElement(Discover, {
   path: "/"
 }), React.createElement(Browse, {

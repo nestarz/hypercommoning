@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@eliaspourquoi/heritage@^0.1.8":
-  version "0.1.8"
-  resolved "https://registry.yarnpkg.com/@eliaspourquoi/heritage/-/heritage-0.1.8.tgz#9f7afb604d8c4908ae6cbc43eb2ac53d775205bb"
-  integrity sha512-02p87wChvhvs0DftoBqtbQiaAJrfJXlI7yfPgxdLkLvOH0A2aWZzQLryjmtXRvxpryEznGatfYNHbWUKqvRfJA==
+"@eliaspourquoi/heritage@^0.1.9":
+  version "0.1.9"
+  resolved "https://registry.yarnpkg.com/@eliaspourquoi/heritage/-/heritage-0.1.9.tgz#9d996daccd53cb599e84cf165a907fc102f85c5b"
+  integrity sha512-S+bpLdGqaH05+EfUTGfvq72wR8dKVn+VwHVQbqlElIiVKnf0uEjjOEpUaw3Og3deZGzSScxZGV/ReMKBNQGPEA==
   dependencies:
     acorn "^7.2.0"
     node-fetch "^2.6.0"
@@ -20,10 +20,10 @@ esbuild@^0.2.11:
   resolved "https://registry.yarnpkg.com/esbuild/-/esbuild-0.2.12.tgz#77db901f471de7e8732729ff928ffc12687be453"
   integrity sha512-+PMODPa6MshZlZryeNeXxqdHF2A4phUe1AIBDAPqgHWAe5N/9IqrmCcE6RVDei0caMV7D9EBMEuY/X8+Wp5xiw==
 
-esdev@^0.0.21:
-  version "0.0.21"
-  resolved "https://registry.yarnpkg.com/esdev/-/esdev-0.0.21.tgz#732ea54cc5df2195295e4d66fe9e3e62f2e4faf1"
-  integrity sha512-irHYOj1yhLIgKuGcGHcTkNOv5mTqkZXxlO+P+G9KmPepIzl1DPZDlhKKZ1MQNhgUqJWv4STqngurtG6N3Wl3WA==
+esdev@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/esdev/-/esdev-0.1.1.tgz#0240b7b816c55fa58ff2408e272fd9334c3e7090"
+  integrity sha512-51W+T+9ZcyF3plJZZY/5jH62hbc79pGYsZ3NL5Jug6qc4T8L/uZ18hoApvCULVnWYYSfSUwWTBU2D8uCty0qNA==
   dependencies:
     acorn "^7.2.0"
     esbuild "^0.2.11"

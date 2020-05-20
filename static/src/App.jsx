@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Router, Link } from "@reach/router";
 import register from "./event-source.js";
 
@@ -36,17 +36,38 @@ const useFiles = (host, dir) => {
   return files;
 };
 
+const Download = ({ name, host, route, children }) => {
+  const download = useCallback(() => {
+    fetch(join(base, "download", host, route))
+      .then((res) => res.blob())
+      .then((blob) => {
+        const file = window.URL.createObjectURL(blob);
+        window.location.assign(file);
+      });
+  }, [host, route]);
+  return (
+    <a href="#" onClick={download}>
+      {children}
+    </a>
+  );
+};
+
 const Files = ({ host, dir }) => {
-  console.log(dir);
   const files = useFiles(host, dir);
   const base = join("/", "remote", host);
   return (
     <>
-      {files.map((name) => (
+      {files.map(({ name, route, extension }) => (
         <li>
-          <Link to={dir ? join(base, dir, name) : join(base, name)}>
-            {name}
-          </Link>
+          {extension ? (
+            <Download host={host} route={route} name={name}>
+              {name}
+            </Download>
+          ) : (
+            <Link to={dir ? join(base, dir, name) : join(base, name)}>
+              {name}
+            </Link>
+          )}
         </li>
       ))}
     </>
@@ -73,9 +94,38 @@ const Peers = () => {
   );
 };
 
+const useVerifyPeer = (host) => {
+  const [exists, setExists] = useState();
+  const [loading, setLoading] = useState();
+  useEffect(() => {
+    setLoading(true);
+    fetch(join(base, "check", host))
+      .then((r) => r.json())
+      .then(({ exists }) => setExists(exists))
+      .finally(() => setLoading(false));
+  }, [host]);
+  return { exists, loading };
+};
+
+const VerifyPeer = ({ host, children }) => {
+  const { exists, loading } = useVerifyPeer(host);
+  return loading ? (
+    <>Fetching...</>
+  ) : !exists ? (
+    <>Peer not found...</>
+  ) : (
+    children
+  );
+};
+
 const Discover = () => <Peers></Peers>;
 const Browse = ({ host, location: { pathname } }) => (
-  <Peer host={host} dir={/^\/.[^\/]*\/(.[^\/]*)(.*)/.exec(pathname)[2]}></Peer>
+  <VerifyPeer host={host}>
+    <Peer
+      host={host}
+      dir={/^\/.[^\/]*\/(.[^\/]*)(.*)/.exec(pathname)[2]}
+    ></Peer>
+  </VerifyPeer>
 );
 
 export default () => (

@@ -1,8 +1,8 @@
 {
   "imports": {
+    "es-module-shims": "/web_modules/es-module-shims/0.4.6/es-module-shims.js",
     "react": "/web_modules/react/16.13.1/react.js",
     "react-dom": "/web_modules/react-dom/16.13.1/react-dom.js",
-    "es-module-shims": "/web_modules/es-module-shims/0.4.6/es-module-shims.js",
     "@reach/router": "/web_modules/@reach/router/1.3.3/router.js"
   },
   "scopes": {
@@ -12,8 +12,8 @@
     "/web_modules/@reach/router/1.3.3/": {
       "create-react-context": "/web_modules/create-react-context/0.3.0/create-react-context.js",
       "react-lifecycles-compat": "/web_modules/react-lifecycles-compat/3.0.4/react-lifecycles-compat.js",
-      "react": "/web_modules/react/16.13.1/react.js",
       "invariant": "/web_modules/invariant/2.2.4/invariant.js",
+      "react": "/web_modules/react/16.13.1/react.js",
       "gud": "/web_modules/gud/1.0.0/gud.js",
       "warning": "/web_modules/warning/4.0.3/warning.js",
       "prop-types": "/web_modules/prop-types/15.7.2/prop-types.js",

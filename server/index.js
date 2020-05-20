@@ -7,7 +7,7 @@ function cli(command, ...args) {
   const actions = {
     [undefined]: () => serve(),
     swarm: () => swarm(({ data }) => console.log(data), args[0]),
-    serve: () => serve(swarm()),
+    serve: () => serve(swarm()).then(console.log),
   };
 
   if (command in actions) actions[command]();
