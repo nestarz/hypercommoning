@@ -23,7 +23,7 @@ const useFiles = (host, dir) => {
 };
 const Download = ({name, host, route, children}) => {
   const download = useCallback(() => {
-    fetch(join(base, "download", host, route)).then((res) => res.blob()).then((blob) => {
+    fetch(join(base, "download", host, route)).then((res) => console.log(res) || res.blob()).then((blob) => {
       const file = window.URL.createObjectURL(blob);
       window.location.assign(file);
     });

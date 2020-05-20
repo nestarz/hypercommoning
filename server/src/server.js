@@ -31,14 +31,19 @@ const makeListener = (peers) => async (req, res) => {
     const [_, peer, folder] = /^\/.[^\/]*\/(.[^\/]*)(.*)/g.exec(pathname);
     peers
       .ask(peer, "files", folder)
-      .then((files) => res.write(JSON.stringify(files)))
+      .then((buffer) => buffer.toString())
+      .then((files) => res.write(files))
       .catch((err) => res.writeHead(404, err))
       .finally(() => res.end());
   } else if (pathname.startsWith("/download/")) {
     const [_, peer, file] = /^\/.[^\/]*\/(.[^\/]*)(.*)/g.exec(pathname);
     peers
       .ask(peer, "download", file)
-      .then((fileStream) => res.pipe(fileStream))
+      .then(
+        (fileStream) =>
+          console.log(fileStream.toString()) || fileStream.toString()
+      )
+      .then((fileStream) => res.write(fileStream))
       .catch((err) => res.writeHead(404, err))
       .finally(() => res.end());
   } else {

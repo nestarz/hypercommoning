@@ -1,8 +1,10 @@
 import hyperswarm from "hyperswarm";
+import lpstream from "length-prefixed-stream";
 import crypto from "crypto";
 import stream from "stream";
 import path from "path";
-import { promises as fs, createWriteStream } from "fs";
+import pumpify from "pumpify";
+import { promises as fs, createReadStream } from "fs";
 
 const l = async (route) =>
   fs
@@ -19,45 +21,74 @@ const l = async (route) =>
       )
     );
 
+class AddEvent extends stream.Transform {
+  static allocSize = 40;
+  constructor(event) {
+    super();
+    this.event = event.padEnd(AddEvent.allocSize, " ");
+  }
+  _transform(chunk, _, done) {
+    this.push(Buffer.concat([Buffer.from(this.event), chunk]));
+    done();
+  }
+  static unzip(data) {
+    const event = data.slice(0, AddEvent.allocSize).toString().trimEnd();
+    const buffer = data.slice(AddEvent.allocSize);
+    return { event, buffer };
+  }
+}
+
 class Peer {
   constructor(socket, details, base) {
     this.id = details.peer ? `${details.peer.host}:${details.peer.port}` : null;
     this.socket = socket;
-    this.callbacks = [];
-    this.socket.on("data", (data) => {
-      const { message, event: incEvent } = JSON.parse(data.toString());
-      this.callbacks
-        .filter(({ event }) => event === incEvent)
-        .forEach(({ callback }) => callback(message));
+    this.callbacks = {};
+
+    this.encoder = lpstream.encode();
+    this.decoder = lpstream.decode();
+
+    this.send = pumpify(this.encoder, this.socket);
+    this.receive = pumpify(this.socket, this.decoder);
+
+    this.receive.on("data", (data) => {
+      const { event, buffer } = AddEvent.unzip(data);
+      this.callbacks[event]?.forEach((callback) => callback(buffer.toString()));
     });
 
     this.watchFilesListRequest(base);
     this.watchDownloadRequest(base);
   }
 
-  on(event, callback) {
-    this.callbacks.push({ event, callback });
-  }
+  toStream = (message) => {
+    const messageStream = new stream.Readable();
+    messageStream.push(message);
+    messageStream.push(null);
+    return messageStream;
+  };
 
   emit(event, message) {
-    this.bufferStream = new stream.PassThrough();
-    this.bufferStream.pipe(this.socket);
-    this.bufferStream.write(JSON.stringify({ event, message }));
+    const messageStream =
+      message instanceof stream.Stream ? message : this.toStream(message);
+    messageStream.pipe(new AddEvent(event)).pipe(this.encoder, { end: false });
+  }
+
+  on(event, callback) {
+    this.callbacks[event] = this.callbacks[event] ?? [];
+    this.callbacks[event].push(callback);
   }
 
   watchFilesListRequest(base) {
-    this.on("files", async (data) => {
-      if (Array.isArray(data)) return;
-      const files = await l(path.join(base, data));
-      this.emit("files", files);
+    this.on("askfiles", async (data) => {
+      const route = data.toString();
+      const files = await l(path.join(base, route));
+      this.emit("answerfiles", JSON.stringify(files));
     });
   }
 
   watchDownloadRequest(base) {
-    this.on("download", async (data) => {
-      console.log(path.join(base, data));
-      console.log(createWriteStream(path.join(base, data)));
-      createWriteStream(path.join(base, data)).pipe(this.socket);
+    this.on("askdownload", async (data) => {
+      const route = path.join(base, data);
+      this.emit("answerdownload", createReadStream(route));
     });
   }
 }
@@ -73,7 +104,7 @@ class PeersState {
     if (peer.id) {
       this.peers[peer.id] = peer;
       this.callbacks.forEach((calllback) =>
-        calllback({ peer, peers: Object.freeze(this.peers) })
+        calllback({ peer: peer.id, peers: this.toList() })
       );
     }
   }
@@ -86,13 +117,13 @@ class PeersState {
     return new Promise((resolve, reject) => {
       if (!(peerId in this.peers)) reject("peerId unknown");
       const peer = this.peers[peerId];
-      peer.emit(question, args);
-      peer.on(question, resolve);
+      peer.emit("ask" + question, args);
+      peer.on("answer" + question, resolve);
     });
   }
 
   toList() {
-    return Object.freeze(Object.keys(this.peers));
+    return Object.freeze([...Object.keys(this.peers)]);
   }
 }
 
@@ -110,6 +141,7 @@ export const swarm = (stdout = () => null, base = ".") => {
 
   const peers = new PeersState(base);
   swarm.on("connection", (socket, info) => peers.add(socket, info, base));
+  swarm.on("disconnection", (socket, info) => console.log("disconnection"));
 
   return {
     peers,
