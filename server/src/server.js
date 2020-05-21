@@ -39,10 +39,7 @@ const makeListener = (peers) => async (req, res) => {
     const [_, peer, file] = /^\/.[^\/]*\/(.[^\/]*)(.*)/g.exec(pathname);
     peers
       .ask(peer, "download", file)
-      .then(
-        (fileStream) =>
-          console.log(fileStream.toString()) || fileStream.toString()
-      )
+      .then((fileStream) => fileStream.toString())
       .then((fileStream) => res.write(fileStream))
       .catch((err) => res.writeHead(404, err))
       .finally(() => res.end());

@@ -52,7 +52,7 @@ class Peer {
 
     this.receive.on("data", (data) => {
       const { event, buffer } = AddEvent.unzip(data);
-      this.callbacks[event]?.forEach((callback) => callback(buffer.toString()));
+      this.callbacks[event]?.forEach((callback) => callback(buffer));
     });
 
     this.watchFilesListRequest(base);
@@ -69,13 +69,13 @@ class Peer {
   emit(event, message) {
     const messageStream =
       message instanceof stream.Stream ? message : this.toStream(message);
-    messageStream.pipe(new AddEvent(event)).pipe(this.encoder, { end: false });
+    messageStream.pipe(new AddEvent(event)).pipe(this.send, { end: false });
   }
 
   on(event, callback) {
     this.callbacks[event] = this.callbacks[event] ?? [];
     this.callbacks[event].push(callback);
-  }
+  } 
 
   watchFilesListRequest(base) {
     this.on("askfiles", async (data) => {
@@ -87,7 +87,7 @@ class Peer {
 
   watchDownloadRequest(base) {
     this.on("askdownload", async (data) => {
-      const route = path.join(base, data);
+      const route = path.join(base, data.toString());
       this.emit("answerdownload", createReadStream(route));
     });
   }
