@@ -6,8 +6,8 @@ import serve from "./src/server.js";
 function cli(command, ...args) {
   const actions = {
     [undefined]: () => serve(),
-    swarm: () => swarm(({ data }) => console.log(data), args[0]),
-    serve: () => serve(swarm()).then(console.log),
+    swarm: () => swarm(args[0]),
+    serve: () => serve(swarm(args[0])).then(console.log),
   };
 
   if (command in actions) actions[command]();

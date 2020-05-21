@@ -6,20 +6,24 @@ import path from "path";
 import pumpify from "pumpify";
 import { promises as fs, createReadStream } from "fs";
 
-const l = async (route) =>
-  fs
-    .readdir(route, "utf8")
-    .catch(() => [])
-    .then((files) =>
-      Promise.all(
-        files.map(async (name) => ({
-          name,
-          route: path.join(route, name),
-          extension: path.extname(name),
-          fileSizeInBytes: (await fs.stat(path.join(route, name))).size,
-        }))
-      )
-    );
+const l = async (localRoute, route) => {
+  const fileInfo = async (name) => ({
+    name: name || path.basename(localRoute),
+    route: path.join(route, name),
+    extension: path.extname(name || localRoute),
+    fileSizeInBytes: (await fs.stat(path.join(localRoute, name))).size,
+  });
+
+  console.log(localRoute);
+  return fs.lstat(localRoute).then(async (stat) =>
+    stat.isFile()
+      ? [await fileInfo("")]
+      : await fs
+          .readdir(localRoute, "utf8")
+          .catch(() => [])
+          .then((files) => Promise.all(files.map(fileInfo)))
+  );
+};
 
 class AddEvent extends stream.Transform {
   static allocSize = 40;
@@ -39,16 +43,18 @@ class AddEvent extends stream.Transform {
 }
 
 class Peer {
+  static createId = (details) =>
+    details.peer ? `${details.peer.host}:${details.peer.port}` : null;
   constructor(socket, details, base) {
-    this.id = details.peer ? `${details.peer.host}:${details.peer.port}` : null;
+    this.id = Peer.createId(details);
     this.socket = socket;
     this.callbacks = {};
 
     this.encoder = lpstream.encode();
     this.decoder = lpstream.decode();
 
-    this.send = pumpify(this.encoder, this.socket);
-    this.receive = pumpify(this.socket, this.decoder);
+    this.send = pumpify(this.encoder, this.socket).on("error", this.destroy);
+    this.receive = pumpify(this.socket, this.decoder).on("error", this.destroy);
 
     this.receive.on("data", (data) => {
       const { event, buffer } = AddEvent.unzip(data);
@@ -75,12 +81,19 @@ class Peer {
   on(event, callback) {
     this.callbacks[event] = this.callbacks[event] ?? [];
     this.callbacks[event].push(callback);
-  } 
+  }
+
+  destroy(err) {
+    err && console.log(err);
+    this.send && this.send.destroy();
+    this.receive && this.receive.destroy();
+    this.callbacks = {};
+  }
 
   watchFilesListRequest(base) {
     this.on("askfiles", async (data) => {
       const route = data.toString();
-      const files = await l(path.join(base, route));
+      const files = await l(path.join(base, route), route);
       this.emit("answerfiles", JSON.stringify(files));
     });
   }
@@ -103,10 +116,21 @@ class PeersState {
     const peer = new Peer(socket, details, base);
     if (peer.id) {
       this.peers[peer.id] = peer;
-      this.callbacks.forEach((calllback) =>
-        calllback({ peer: peer.id, peers: this.toList() })
-      );
+      this.update();
     }
+  }
+
+  remove(_, details) {
+    const id = Peer.createId(details);
+    if (id in this.peers) {
+      this.peers[id].destroy();
+      delete this.peers[id];
+      this.update();
+    }
+  }
+
+  update() {
+    this.callbacks.forEach((calllback) => calllback({ peers: this.toList() }));
   }
 
   onUpdate(callback) {
@@ -127,7 +151,7 @@ class PeersState {
   }
 }
 
-export const swarm = (stdout = () => null, base = ".") => {
+export const swarm = (base = ".") => {
   const swarm = hyperswarm();
   const topic = crypto
     .createHash("sha256")
@@ -141,7 +165,7 @@ export const swarm = (stdout = () => null, base = ".") => {
 
   const peers = new PeersState(base);
   swarm.on("connection", (socket, info) => peers.add(socket, info, base));
-  swarm.on("disconnection", (socket, info) => console.log("disconnection"));
+  swarm.on("disconnection", (socket, info) => peers.remove(socket, info));
 
   return {
     peers,

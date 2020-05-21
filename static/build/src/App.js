@@ -55,21 +55,9 @@ const Peers = () => {
     host
   })));
 };
-const useVerifyPeer = (host) => {
-  const [exists, setExists] = useState();
-  const [loading, setLoading] = useState();
-  useEffect(() => {
-    setLoading(true);
-    fetch(join(base, "check", host)).then((r) => r.json()).then(({exists: exists2}) => setExists(exists2)).finally(() => setLoading(false));
-  }, [host]);
-  return {
-    exists,
-    loading
-  };
-};
 const VerifyPeer = ({host, children}) => {
-  const {exists, loading} = useVerifyPeer(host);
-  return loading ? React.createElement(React.Fragment, null, "Fetching...") : !exists ? React.createElement(React.Fragment, null, "Peer not found...") : children;
+  const peers = usePeers();
+  return !Array.isArray(peers) ? React.createElement(React.Fragment, null, "Fetching...") : peers.includes(host) ? children : React.createElement(React.Fragment, null, "Peer not found...");
 };
 const Discover = () => React.createElement(Peers, null);
 const Browse = ({host, location: {pathname}}) => React.createElement(VerifyPeer, {

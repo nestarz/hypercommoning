@@ -94,27 +94,15 @@ const Peers = () => {
   );
 };
 
-const useVerifyPeer = (host) => {
-  const [exists, setExists] = useState();
-  const [loading, setLoading] = useState();
-  useEffect(() => {
-    setLoading(true);
-    fetch(join(base, "check", host))
-      .then((r) => r.json())
-      .then(({ exists }) => setExists(exists))
-      .finally(() => setLoading(false));
-  }, [host]);
-  return { exists, loading };
-};
-
 const VerifyPeer = ({ host, children }) => {
-  const { exists, loading } = useVerifyPeer(host);
-  return loading ? (
+  const peers = usePeers();
+
+  return !Array.isArray(peers) ? (
     <>Fetching...</>
-  ) : !exists ? (
-    <>Peer not found...</>
-  ) : (
+  ) : peers.includes(host) ? (
     children
+  ) : (
+    <>Peer not found...</>
   );
 };
 

@@ -1,11 +1,11 @@
 import url from "url";
 import http from "http";
 import net from "net";
+import mime from "mime";
 
 const eventStream = (peers, send) => {
   send("log", "connected");
   send("peers", peers.toList());
-  peers.onUpdate(({ peer }) => send("peer", peer));
   peers.onUpdate(({ peers }) => send("peers", peers));
 };
 
@@ -37,10 +37,23 @@ const makeListener = (peers) => async (req, res) => {
       .finally(() => res.end());
   } else if (pathname.startsWith("/download/")) {
     const [_, peer, file] = /^\/.[^\/]*\/(.[^\/]*)(.*)/g.exec(pathname);
+    const [fileInfo] = await peers
+      .ask(peer, "files", file)
+      .then((buffer) => buffer.toString())
+      .then(JSON.parse);
+
     peers
       .ask(peer, "download", file)
       .then((fileStream) => fileStream.toString())
-      .then((fileStream) => res.write(fileStream))
+      .then((fileStream) => {
+        res.writeHead(200, {
+          connection: "keep-alive",
+          "content-type": mime.getType(fileInfo.extension.replace(".", "")),
+          "content-disposition": `attachment; filename=\"${fileInfo.name}\"`,
+          "access-control-allow-origin": "*",
+        });
+        res.write(fileStream);
+      })
       .catch((err) => res.writeHead(404, err))
       .finally(() => res.end());
   } else {

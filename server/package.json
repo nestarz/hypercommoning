@@ -10,6 +10,7 @@
     "esdev": "^0.0.21",
     "hyperswarm": "^2.14.0",
     "length-prefixed-stream": "^2.0.0",
+    "mime": "^2.4.5",
     "pumpify": "^2.0.1",
     "stream-channels": "^1.4.1"
   }
